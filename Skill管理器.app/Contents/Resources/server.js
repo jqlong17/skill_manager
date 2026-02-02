@@ -29,9 +29,9 @@ function loadConfig() {
   const config = JSON.parse(raw);
   const roots = [...(config.skillRoots || []), ...(config.customRoots || [])];
   const projectNamePatterns = config.projectNamePatterns || [
-    { id: 'cursor', pattern: '/([^/]+)/\\.cursor/skills', description: '.cursor 前的目录（如 moi）' },
-    { id: 'skills', pattern: '/([^/]+)/skills/', description: 'skills 前的目录（如 clawdbot-main）' },
-    { id: 'extensions', pattern: '/([^/]+)/extensions/', description: 'extensions 前的目录（如 clawdbot-main）' }
+    { id: 'cursor', pattern: '/([^/]+)/\\.cursor/skills', description: '.cursor 前的目录' },
+    { id: 'skills', pattern: '/([^/]+)/skills/', description: 'skills 前的目录' },
+    { id: 'extensions', pattern: '/([^/]+)/extensions/', description: 'extensions 前的目录' }
   ];
   return { ...config, allRoots: roots, projectNamePatterns };
 }
@@ -43,7 +43,7 @@ function extractProjectName(pathOrSkillMd, fallback) {
     try {
       const re = new RegExp(p.pattern);
       const m = pathStr.match(re);
-      if (m && m[1]) return m[1];
+      if (m && m[1] && m[1] !== '.cursor') return m[1];
     } catch (_) {}
   }
   return fallback || '';
@@ -251,6 +251,8 @@ function getProjectsUnderPath(rootPath) {
 
   const { dirs: skillsDirs, files: skillMdFiles } = findDirsOrFiles(resolved, { dirNames: ['skills', 'skill'], fileNames: ['skill'], maxDepth: 8 });
   for (const d of skillsDirs) {
+    const dNorm = path.normalize(d).replace(/\\/g, '/');
+    if (dNorm.includes('/.cursor/skills')) continue;
     const parent = path.dirname(d);
     const projName = path.basename(parent);
     const skills = scanSkillsDirExtended(d);

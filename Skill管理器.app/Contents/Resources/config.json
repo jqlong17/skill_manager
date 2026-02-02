@@ -1,8 +1,20 @@
 {
   "projectNamePatterns": [
-    { "id": "cursor", "pattern": "/([^/]+)/\\.cursor/skills", "description": ".cursor 前的目录（如 moi）" },
-    { "id": "skills", "pattern": "/([^/]+)/skills/", "description": "skills 前的目录（如 clawdbot-main）" },
-    { "id": "extensions", "pattern": "/([^/]+)/extensions/", "description": "extensions 前的目录（如 clawdbot-main）" }
+    {
+      "id": "cursor",
+      "pattern": "/([^/]+)/\\.cursor/skills",
+      "description": ".cursor 前的目录"
+    },
+    {
+      "id": "skills",
+      "pattern": "/([^/]+)/skills/",
+      "description": "skills 前的目录"
+    },
+    {
+      "id": "extensions",
+      "pattern": "/([^/]+)/extensions/",
+      "description": "extensions 前的目录"
+    }
   ],
   "skillRoots": [
     {
@@ -38,8 +50,6 @@
   ],
   "customRoots": [],
   "projectScanPaths": [
-    "/Users/ruska/project/demo/moi",
-    "/Users/ruska/clawd",
     "/Users/ruska/project",
     "/Users/ruska/开源项目"
   ]

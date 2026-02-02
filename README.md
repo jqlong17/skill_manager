@@ -44,7 +44,7 @@ chmod +x Skill管理器.app/Contents/MacOS/launcher
 | 搜索 | 按名称或描述过滤 |
 | 编辑与保存 | 点击 Skill 或其中的 `.md` 文件，右侧查看编辑并保存 |
 | 复制路径 | 一键复制 Skill 或子文件路径 |
-| 项目管理 | 在「项目 skill」Tab 中添加扫描目录，自动发现 `.cursor/skills` |
+| 项目管理 | 在「项目 skill」Tab 中添加扫描目录，自动发现 skill；可配置项目名识别正则 |
 | 主题切换 | 右上角切换白色 / 黑色主题 |
 
 ---
@@ -71,6 +71,7 @@ chmod +x Skill管理器.app/Contents/MacOS/launcher
 
 - **skillRoots**：定义全局和应用内置 Skill 的来源路径（支持 `~`）
 - **projectScanPaths**：项目 Skill 的扫描根目录（可在界面上添加或删除）
+- **projectNamePatterns**：项目名识别正则（可在「项目 skill」Tab 下管理），按顺序匹配路径，第一个捕获组为项目名
 
 修改后重启应用生效。
 
@@ -100,10 +101,12 @@ skill管理器/
     │   ├── Info.plist          # 应用元信息
     │   ├── MacOS/
     │   │   └── launcher        # 启动脚本：杀旧进程 → 起 Node 服务 → 打开浏览器
-    │   └── Resources/
+    │       └── Resources/
     │       ├── server.js       # HTTP 服务：静态文件 + REST API
     │       ├── index.html      # 单页前端（HTML/CSS/JS）
-    │       └── config.json     # 分类与路径配置
+    │       ├── config.json     # 分类、路径与项目名正则配置
+    │       ├── AppIcon.icns    # 应用图标
+    │       └── favicon.png     # 网页标签图标
     └── 同步到应用.sh           # 开发时同步 Resources 到 /Applications 中的 .app
 ```
 
@@ -127,6 +130,7 @@ skill管理器/
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/`、`/index.html` | 返回前端页面 |
+| GET | `/favicon.png` | 返回网页标签图标 |
 | GET | `/api/skills` | 返回所有分类、项目扫描路径、项目详情 |
 | GET | `/api/skill?path=...` | 读取指定 `.md` 文件内容 |
 | POST | `/api/skill` | 保存 `.md` 文件 |
@@ -134,6 +138,10 @@ skill管理器/
 | GET | `/api/config/project-paths` | 获取项目扫描路径列表 |
 | POST | `/api/config/project-paths` | 添加项目扫描路径 |
 | DELETE | `/api/config/project-paths?path=...` | 删除项目扫描路径 |
+| GET | `/api/config/project-name-patterns` | 获取项目名识别正则列表 |
+| POST | `/api/config/project-name-patterns` | 添加项目名正则 |
+| PUT | `/api/config/project-name-patterns` | 覆盖项目名正则列表 |
+| DELETE | `/api/config/project-name-patterns?id=...` | 删除项目名正则 |
 
 ---
 
@@ -153,7 +161,11 @@ skill管理器/
 2. **skills/skill 目录**：递归查找 `skills` 或 `skill` 文件夹（最多 8 层），支持子目录中的 `SKILL.md` 及同级 `.md` 文件
 3. **独立 SKILL.md**：递归查找名为 `SKILL.md` 或 `skill.md` 的文件
 
-扫描时跳过 `node_modules`、`.git`、`__pycache__`、`.venv`、`dist`、`build`、`out`。
+扫描时跳过 `node_modules`、`.git`、`__pycache__`、`.venv`、`dist`、`build`、`out`。`.cursor/skills` 由 Cursor 规则处理，不计入 `skills/` 扫描。
+
+### 项目名识别
+
+`extractProjectName(path)` 按 `projectNamePatterns` 顺序匹配路径，第一个捕获组为项目名；`.cursor` 作为项目名时视为无效，跳过该匹配。
 
 ### 路径校验
 
