@@ -1,0 +1,13 @@
+#!/bin/bash
+export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
+RESOURCE_DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
+cd "$RESOURCE_DIR"
+PORT=38473
+# 先结束占用该端口的旧进程，确保每次启动都用当前 .app 里的 server.js
+lsof -ti :$PORT 2>/dev/null | xargs kill -9 2>/dev/null
+sleep 0.5
+nohup node server.js "$PORT" > /dev/null 2>&1 &
+disown
+sleep 1
+open "http://127.0.0.1:$PORT"
+exit 0

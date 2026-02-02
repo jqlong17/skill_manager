@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <title>Skill 管理器</title>
+  <style>
+    :root, [data-theme="dark"] {
+      --bg: #0f0f12;
+      --card: #18181c;
+      --border: #2a2a2e;
+      --text: #e4e4e7;
+      --muted: #71717a;
+      --accent: #a78bfa;
+      --accent-dim: #7c5dd4;
+    }
+    [data-theme="light"] {
+      --bg: #f4f4f5;
+      --card: #fff;
+      --border: #e4e4e7;
+      --text: #18181b;
+      --muted: #71717a;
+      --accent: #7c3aed;
+      --accent-dim: #6d28d9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .header {
+      flex-shrink: 0;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .header-left { flex: 1; min-width: 0; }
+    .header h1 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+    .header .subtitle { font-size: 0.8125rem; color: var(--muted); margin-top: 0.25rem; }
+    .search-box {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .search-box input {
+      flex: 1;
+      min-width: 0;
+      padding: 0.4rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--text);
+      font-size: 0.8125rem;
+    }
+    .search-box input:focus { outline: none; border-color: var(--accent); }
+    .search-box input::placeholder { color: var(--muted); }
+    .theme-switch {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .theme-switch button {
+      padding: 0.35rem 0.75rem;
+      border: none;
+      background: var(--card);
+      color: var(--muted);
+      font-size: 0.8125rem;
+      cursor: pointer;
+    }
+    .theme-switch button:first-child { border-right: 1px solid var(--border); }
+    .theme-switch button.active { background: var(--accent); color: #fff; }
+    .theme-switch button:hover:not(.active) { color: var(--text); }
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.8125rem;
+    }
+    .tab:hover { border-color: var(--accent-dim); }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .panels {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+    .left {
+      width: 50%;
+      min-width: 320px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .table-wrap {
+      flex: 1;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+    th, td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      background: var(--card);
+      color: var(--muted);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tr.skill-row { cursor: pointer; }
+    tr.skill-row:hover { background: var(--card); }
+    tr.skill-row.selected { background: rgba(167, 139, 250, 0.15); }
+    .col-name { width: 18%; min-width: 100px; font-weight: 500; }
+    .col-desc { width: 38%; min-width: 140px; color: var(--muted); }
+    .col-desc span {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .col-path { width: 24%; min-width: 100px; font-size: 0.75rem; color: var(--muted); word-break: break-all; }
+    .col-actions { width: 10%; min-width: 80px; }
+    .col-project { width: 12%; min-width: 70px; color: var(--muted); font-size: 0.8125rem; }
+    .col-time { width: 11%; min-width: 88px; font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+    .col-expand { width: 28px; padding: 0.35rem !important; text-align: center; }
+    .expand-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0; font-size: 0.7rem; }
+    .expand-btn:hover { color: var(--accent); }
+    .expand-btn.expanded { transform: rotate(90deg); }
+    tr.child-row td { background: var(--bg); font-size: 0.75rem; color: var(--muted); padding-left: 2rem; }
+    tr.child-row .child-name { color: var(--text); }
+    tr.child-row .child-type { font-size: 0.7rem; }
+    tr.child-row.clickable-md { cursor: pointer; }
+    tr.child-row.clickable-md:hover td { background: var(--card); }
+    tr.scan-path-row td { background: var(--accent-dim); color: #fff; font-weight: 500; font-size: 0.8125rem; padding: 0.5rem 0.75rem; }
+    tr.scan-path-row td span.path-count { font-weight: normal; opacity: 0.8; margin-left: 0.5rem; }
+    .project-paths-panel {
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .project-paths-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+    .project-paths-header:hover { background: var(--bg); }
+    .project-paths-header .title { font-size: 0.8125rem; font-weight: 500; color: var(--muted); }
+    .project-paths-header .toggle { font-size: 0.7rem; color: var(--muted); }
+    .project-paths-body { padding: 0.75rem 1rem; }
+    .project-paths-body.collapsed { display: none; }
+    .project-paths-input { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+    .project-paths-input input {
+      flex: 1;
+      min-width: 0;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.8125rem;
+    }
+    .project-paths-input input:focus { outline: none; border-color: var(--accent-dim); }
+    .add-path-feedback { margin-left: 0.5rem; font-size: 0.8125rem; color: var(--muted); }
+    .add-path-feedback.done { color: var(--accent); }
+    .add-path-feedback.err { color: var(--danger, #c0392b); }
+    .project-paths-list { font-size: 0.75rem; color: var(--muted); }
+    .project-paths-list .path-item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.25rem 0; }
+    .pattern-item { flex-wrap: wrap; }
+    .pattern-order { color: var(--muted); font-size: 0.75rem; margin-right: 0.25rem; }
+    .pattern-text { font-family: ui-monospace, monospace; font-size: 0.75rem; background: var(--bg); padding: 0.15rem 0.4rem; border-radius: 4px; word-break: break-all; }
+    .pattern-desc { color: var(--muted); font-size: 0.75rem; margin-left: 0.5rem; flex: 1; }
+    .project-paths-list .path-item span { word-break: break-all; }
+    .project-paths-list .path-item .path-expand { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 0.25rem; font-size: 0.7rem; margin-right: 0.25rem; }
+    .project-paths-list .path-item .path-expand:hover { color: var(--accent); }
+    .project-paths-list .path-item .path-count { font-size: 0.75rem; color: var(--accent); margin-left: 0.25rem; }
+    .btn {
+      padding: 0.3rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-right: 0.25rem;
+      margin-bottom: 0.25rem;
+    }
+    .btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .right {
+      width: 50%;
+      min-width: 280px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--card);
+    }
+    .editor-header {
+      flex-shrink: 0;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .editor-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    .editor-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 0.75rem;
+    }
+    .editor-placeholder {
+      color: var(--muted);
+      font-size: 0.875rem;
+      padding: 1rem;
+    }
+    #editor {
+      flex: 1;
+      min-height: 200px;
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, monospace;
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      resize: none;
+    }
+    #editor:focus { outline: none; border-color: var(--accent-dim); }
+    .editor-actions { margin-top: 0.5rem; flex-shrink: 0; }
+    .save-status { font-size: 0.75rem; color: var(--muted); margin-left: 0.5rem; }
+    .save-status.ok { color: #22c55e; }
+    .save-status.err { color: #f87171; }
+    .loading, .error { text-align: center; padding: 2rem; color: var(--muted); }
+    .error { color: #f87171; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>Skill 管理器</h1>
+      <p class="subtitle">按分类查看与管理本机Skill</p>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜索 Skill（名称或描述）" />
+      </div>
+      <div class="tabs" id="tabs"></div>
+    </div>
+    <div class="theme-switch" id="themeSwitch">
+      <button type="button" data-theme="dark" id="themeDark">黑色</button>
+      <button type="button" data-theme="light" id="themeLight">白色</button>
+    </div>
+  </div>
+  <div id="loading" class="loading">正在加载…</div>
+  <div id="error" class="error" style="display:none;"></div>
+  <div id="main" class="panels" style="display:none;">
+    <div class="left">
+      <div id="projectPathsPanel" class="project-paths-panel" style="display:none;">
+        <div class="project-paths-header" id="projectPathsHeader">
+          <span class="title">已添加的扫描目录</span>
+          <span class="toggle" id="projectPathsToggle">▼</span>
+        </div>
+        <div class="project-paths-body" id="projectPathsBody">
+          <div class="project-paths-input">
+            <input type="text" id="projectPathInput" placeholder="父目录或具体项目路径，如 ~/Projects 或 ~/Projects/某项目" />
+            <button type="button" class="btn btn-primary" id="addPathBtn">添加目录</button>
+            <span id="addPathFeedback" class="add-path-feedback"></span>
+          </div>
+          <div class="project-paths-list" id="projectPathsList"></div>
+        </div>
+      </div>
+      <div id="projectNamePatternsPanel" class="project-paths-panel" style="display:none;">
+        <div class="project-paths-header" id="projectNamePatternsHeader">
+          <span class="title">项目名识别正则（按顺序匹配，第一个捕获组为项目名）</span>
+          <span class="toggle" id="projectNamePatternsToggle">▼</span>
+        </div>
+        <div class="project-paths-body" id="projectNamePatternsBody">
+          <div class="project-paths-input">
+            <input type="text" id="patternInput" placeholder="正则，如 /([^/]+)/\\.cursor/skills" />
+            <input type="text" id="patternDescInput" placeholder="说明（可选）" style="width:140px;" />
+            <button type="button" class="btn btn-primary" id="addPatternBtn">添加</button>
+          </div>
+          <div class="project-paths-list" id="projectNamePatternsList"></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr id="tableHeadRow">
+              <th class="col-name">技能名称</th>
+              <th class="col-desc">描述</th>
+              <th class="col-path">地址</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="right">
+      <div class="editor-header">
+        <span class="editor-title" id="editorTitle">—</span>
+        <span class="save-status" id="saveStatus"></span>
+      </div>
+      <div class="editor-body">
+        <div class="editor-placeholder" id="editorPlaceholder">左侧选择一项 Skill 可在此编辑并保存</div>
+        <textarea id="editor" style="display:none;" spellcheck="false"></textarea>
+        <div class="editor-actions" id="editorActions" style="display:none;">
+          <button type="button" class="btn btn-primary" id="saveBtn">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const THEME_KEY = 'skill-manager-theme';
+    function getTheme() { return localStorage.getItem(THEME_KEY) || 'light'; }
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem(THEME_KEY, theme);
+      document.getElementById('themeDark').classList.toggle('active', theme === 'dark');
+      document.getElementById('themeLight').classList.toggle('active', theme === 'light');
+    }
+    document.documentElement.setAttribute('data-theme', getTheme());
+    document.getElementById('themeDark').addEventListener('click', () => setTheme('dark'));
+    document.getElementById('themeLight').addEventListener('click', () => setTheme('light'));
+    setTheme(getTheme());
+
+    const tabsEl = document.getElementById('tabs');
+    const tableBody = document.getElementById('tableBody');
+    const loadingEl = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const mainEl = document.getElementById('main');
+    const editorTitle = document.getElementById('editorTitle');
+    const editorPlaceholder = document.getElementById('editorPlaceholder');
+    const editor = document.getElementById('editor');
+    const editorActions = document.getElementById('editorActions');
+    const saveBtn = document.getElementById('saveBtn');
+    const saveStatus = document.getElementById('saveStatus');
+
+    let categories = [];
+    let projectScanPaths = [];
+    let projectPathsDetail = [];
+    let projectNamePatterns = [];
+    let expandedPaths = new Set();
+    let activeCategoryId = null;
+    let currentSkill = null;
+    let searchQuery = '';
+
+    const tableHeadRow = document.getElementById('tableHeadRow');
+    const projectPathsPanel = document.getElementById('projectPathsPanel');
+    const projectPathInput = document.getElementById('projectPathInput');
+    const addPathBtn = document.getElementById('addPathBtn');
+    const projectPathsList = document.getElementById('projectPathsList');
+    const projectPathsHeader = document.getElementById('projectPathsHeader');
+    const projectPathsBody = document.getElementById('projectPathsBody');
+    const projectPathsToggle = document.getElementById('projectPathsToggle');
+    const searchInput = document.getElementById('searchInput');
+
+    let pathsPanelCollapsed = false;
+    projectPathsHeader.addEventListener('click', () => {
+      pathsPanelCollapsed = !pathsPanelCollapsed;
+      projectPathsBody.classList.toggle('collapsed', pathsPanelCollapsed);
+      projectPathsToggle.textContent = pathsPanelCollapsed ? '▶' : '▼';
+    });
+
+    function showError(msg) {
+      loadingEl.style.display = 'block';
+      mainEl.style.display = 'none';
+      errorEl.style.display = 'block';
+      errorEl.textContent = msg;
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s ?? '';
+      return div.innerHTML;
+    }
+    function escapeAttr(s) {
+      return escapeHtml(s ?? '').replace(/"/g, '&quot;');
+    }
+    function formatDate(ts) {
+      if (!ts || ts <= 0) return '—';
+      try {
+        return new Date(ts).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      } catch (_) { return '—'; }
+    }
+
+    function renderTabs() {
+      tabsEl.innerHTML = categories.map(c =>
+        `<button class="tab ${c.id === activeCategoryId ? 'active' : ''}" data-id="${c.id}">${escapeHtml(c.label)} (${c.skills.length})</button>`
+      ).join('');
+      tabsEl.querySelectorAll('.tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeCategoryId = btn.dataset.id;
+          categories.forEach(c => {
+            tabsEl.querySelector(`.tab[data-id="${c.id}"]`)?.classList.toggle('active', c.id === activeCategoryId);
+          });
+          renderTable();
+          renderProjectPathsPanel();
+          renderProjectNamePatternsPanel();
+        });
+      });
+    }
+
+    function getVisibleProjectSkillsGrouped() {
+      const groups = [];
+      for (const d of projectPathsDetail) {
+        if (!expandedPaths.has(d.path)) continue;
+        const skills = [];
+        for (const proj of d.projects || []) {
+          for (const s of proj.skills || []) {
+            skills.push({ ...s, projectName: proj.name, projectPath: proj.path });
+          }
+        }
+        skills.sort((a, b) => (a.projectName || '').localeCompare(b.projectName || '') || (a.name || '').localeCompare(b.name || ''));
+        groups.push({ scanPath: d.path, skillCount: d.skillCount, skills });
+      }
+      return groups;
+    }
+
+    function togglePathExpanded(path) {
+      if (expandedPaths.has(path)) expandedPaths.delete(path);
+      else expandedPaths.add(path);
+      renderTable();
+      renderProjectPathsPanel();
+    }
+
+    function renderProjectPathsPanel() {
+      if (activeCategoryId !== 'projects') return;
+      projectPathsPanel.style.display = 'block';
+      if (!projectPathsDetail.length) {
+        projectPathsList.innerHTML = '<div class="path-item"><span>添加父目录（如 ~/Projects）或具体项目路径后，将扫描其下 .cursor/skills（含一层、两层子目录）</span></div>';
+        return;
+      }
+      projectPathsList.innerHTML = projectPathsDetail.map(d => {
+        const isExp = expandedPaths.has(d.path);
+        return `<div class="path-item">
+          <span>
+            <button type="button" class="path-expand" data-path="${escapeAttr(d.path)}" title="${isExp ? '收起' : '展开'}">${isExp ? '▼' : '▶'}</button>
+            ${escapeHtml(d.path)}<span class="path-count">(${d.skillCount} 个 skill)</span>
+          </span>
+          <button type="button" class="btn remove-path" data-path="${escapeAttr(d.path)}">删除</button>
+        </div>`;
+      }).join('');
+      projectPathsList.querySelectorAll('.path-expand').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.preventDefault(); togglePathExpanded(btn.dataset.path); });
+      });
+      projectPathsList.querySelectorAll('.remove-path').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.preventDefault(); removeProjectPath(btn.dataset.path); });
+      });
+    }
+
+    function renderProjectNamePatternsPanel() {
+      const panel = document.getElementById('projectNamePatternsPanel');
+      const listEl = document.getElementById('projectNamePatternsList');
+      if (activeCategoryId !== 'projects') { panel.style.display = 'none'; return; }
+      panel.style.display = 'block';
+      if (!projectNamePatterns.length) {
+        listEl.innerHTML = '<div class="path-item"><span>从技能路径中用正则提取项目名。第一个捕获组即为项目名。如 <code>/([^/]+)/\\.cursor/skills</code> 可从 .../moi/.cursor/skills/xxx 提取 moi</span></div>';
+      } else {
+        listEl.innerHTML = projectNamePatterns.map((p, i) => `<div class="path-item pattern-item">
+          <span class="pattern-order">${i + 1}.</span>
+          <code class="pattern-text">${escapeHtml(p.pattern)}</code>
+          <span class="pattern-desc">${escapeHtml(p.description || '')}</span>
+          <button type="button" class="btn remove-pattern" data-id="${escapeAttr(p.id)}">删除</button>
+        </div>`).join('');
+        listEl.querySelectorAll('.remove-pattern').forEach(btn => {
+          btn.addEventListener('click', (e) => { e.preventDefault(); removeProjectNamePattern(btn.dataset.id); });
+        });
+      }
+    }
+
+    function addProjectNamePattern() {
+      const pattern = (document.getElementById('patternInput').value || '').trim();
+      const description = (document.getElementById('patternDescInput').value || '').trim();
+      if (!pattern) return;
+      fetch('/api/config/project-name-patterns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pattern, description })
+      }).then(r => r.json()).then(data => {
+        projectNamePatterns = data.projectNamePatterns || [];
+        document.getElementById('patternInput').value = '';
+        document.getElementById('patternDescInput').value = '';
+        refetchAndRender();
+      }).catch(() => {});
+    }
+
+    function removeProjectNamePattern(id) {
+      fetch('/api/config/project-name-patterns?id=' + encodeURIComponent(id), { method: 'DELETE' })
+        .then(r => r.json()).then(data => {
+          projectNamePatterns = data.projectNamePatterns || [];
+          refetchAndRender();
+        });
+    }
+
+    function addProjectPath(path) {
+      const p = (path || '').trim();
+      if (!p) return;
+      const feedbackEl = document.getElementById('addPathFeedback');
+      addPathBtn.disabled = true;
+      feedbackEl.textContent = '扫描中…';
+      feedbackEl.className = 'add-path-feedback';
+      fetch('/api/config/project-paths', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: p })
+      })
+        .then(r => r.json())
+        .then(data => {
+          projectPathInput.value = '';
+          projectScanPaths = data.projectScanPaths || [];
+          return fetch('/api/skills').then(r => r.json());
+        })
+        .then(data => {
+          if (data.categories) categories = data.categories;
+          if (data.projectScanPaths != null) projectScanPaths = data.projectScanPaths;
+          if (data.projectPathsDetail) projectPathsDetail = data.projectPathsDetail;
+          expandedPaths = new Set(projectPathsDetail.map(d => d.path));
+          render();
+          const detail = projectPathsDetail.find(d => d.path === p);
+          const count = detail ? detail.skillCount : 0;
+          feedbackEl.textContent = count > 0
+            ? `扫描完成，共发现 ${count} 个 skill`
+            : '扫描完成，未发现 skill';
+          feedbackEl.className = 'add-path-feedback done';
+          addPathBtn.disabled = false;
+          setTimeout(() => { feedbackEl.textContent = ''; feedbackEl.className = 'add-path-feedback'; }, 3500);
+        })
+        .catch(() => {
+          feedbackEl.textContent = '添加失败';
+          feedbackEl.className = 'add-path-feedback err';
+          addPathBtn.disabled = false;
+          setTimeout(() => { feedbackEl.textContent = ''; feedbackEl.className = 'add-path-feedback'; }, 2500);
+        });
+    }
+
+    function removeProjectPath(path) {
+      fetch('/api/config/project-paths?path=' + encodeURIComponent(path), { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+          projectScanPaths = data.projectScanPaths || [];
+          refetchAndRender();
+        });
+    }
+
+    function refetchAndRender() {
+      fetch('/api/skills')
+        .then(r => r.json())
+        .then(data => {
+          if (data.categories) categories = data.categories;
+          if (data.projectScanPaths != null) projectScanPaths = data.projectScanPaths;
+          if (data.projectPathsDetail) {
+            projectPathsDetail = data.projectPathsDetail;
+            expandedPaths = new Set(projectPathsDetail.map(d => d.path));
+          }
+          if (data.projectNamePatterns) projectNamePatterns = data.projectNamePatterns;
+          render();
+        });
+    }
+
+    function renderTable() {
+      const cat = categories.find(c => c.id === activeCategoryId);
+      if (!cat) return;
+      const isProjects = cat.id === 'projects';
+      projectPathsPanel.style.display = isProjects ? 'block' : 'none';
+      document.getElementById('projectNamePatternsPanel').style.display = isProjects ? 'block' : 'none';
+      const expandTh = '<th class="col-expand"></th>';
+      const timeThs = '<th class="col-time">创建时间</th><th class="col-time">修改时间</th>';
+      const hasAppName = cat.skills.some(s => s.appName);
+      if (isProjects) {
+        tableHeadRow.innerHTML = expandTh + '<th class="col-project">项目</th><th class="col-name">技能名称</th><th class="col-desc">描述</th>' + timeThs + '<th class="col-path">地址</th><th class="col-actions">操作</th>';
+        renderProjectPathsPanel();
+        renderProjectNamePatternsPanel();
+      } else if (hasAppName) {
+        tableHeadRow.innerHTML = expandTh + '<th class="col-project">应用</th><th class="col-name">技能名称</th><th class="col-desc">描述</th>' + timeThs + '<th class="col-path">地址</th><th class="col-actions">操作</th>';
+      } else {
+        tableHeadRow.innerHTML = expandTh + '<th class="col-name">技能名称</th><th class="col-desc">描述</th>' + timeThs + '<th class="col-path">地址</th><th class="col-actions">操作</th>';
+      }
+      const currentPath = currentSkill ? currentSkill.skillMd : '';
+      const colCount = isProjects || hasAppName ? 8 : 7;
+
+      if (isProjects) {
+        const groups = getVisibleProjectSkillsGrouped();
+        const q = searchQuery.trim().toLowerCase();
+        let html = '';
+        let totalVisible = 0;
+        for (const g of groups) {
+          let skills = g.skills;
+          if (q) {
+            skills = skills.filter(s => {
+              const name = (s.name || s.dirName || '').toLowerCase();
+              const desc = (s.description || '').toLowerCase();
+              return name.includes(q) || desc.includes(q);
+            });
+          }
+          if (skills.length === 0) continue;
+          totalVisible += skills.length;
+          html += `<tr class="scan-path-row"><td colspan="${colCount}">${escapeHtml(g.scanPath)}<span class="path-count">(${skills.length} 个 skill)</span></td></tr>`;
+          for (const s of skills) {
+            const createdAt = formatDate(s.createdAt);
+            const updatedAt = formatDate(s.updatedAt);
+            const expandCell = `<td class="col-expand">${s.hasChildren ? `<button type="button" class="expand-btn" data-skill-path="${escapeAttr(s.path)}" title="展开子项">▶</button>` : ''}</td>`;
+            const nameCell = `<td class="col-name">${escapeHtml(s.name || s.dirName)}</td>`;
+            const projectCell = s.projectName ? `<td class="col-project">${escapeHtml(s.projectName)}</td>` : '<td class="col-project">—</td>';
+            html += `<tr class="skill-row ${s.skillMd === currentPath ? 'selected' : ''}" data-skill-md="${escapeAttr(s.skillMd)}" data-skill-name="${escapeAttr(s.name || s.dirName)}" data-skill-path="${escapeAttr(s.path)}">
+              ${expandCell}
+              ${projectCell}
+              ${nameCell}
+              <td class="col-desc"><span>${escapeHtml(s.description || '—')}</span></td>
+              <td class="col-time">${escapeHtml(createdAt)}</td>
+              <td class="col-time">${escapeHtml(updatedAt)}</td>
+              <td class="col-path">${escapeHtml(s.path)}</td>
+              <td class="col-actions">
+                <button type="button" class="btn copy-path" data-path="${escapeAttr(s.path)}">复制路径</button>
+              </td>
+            </tr>`;
+          }
+        }
+        if (totalVisible === 0) {
+          html = `<tr><td colspan="${colCount}" style="text-align:center;color:var(--muted);padding:1rem;">添加扫描目录后此处将显示项目下的 Skill，或展开上方已添加的目录</td></tr>`;
+        }
+        tableBody.innerHTML = html;
+      } else {
+        let skillsForTable = cat.skills;
+        if (searchQuery.trim()) {
+          const q = searchQuery.trim().toLowerCase();
+          skillsForTable = skillsForTable.filter(s => {
+            const name = (s.name || s.dirName || '').toLowerCase();
+            const desc = (s.description || '').toLowerCase();
+            return name.includes(q) || desc.includes(q);
+          });
+        }
+        if (skillsForTable.length === 0) {
+          tableBody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;color:var(--muted);padding:1rem;">该分类下暂无 Skill</td></tr>`;
+        } else {
+          tableBody.innerHTML = skillsForTable.map(s => {
+            const createdAt = formatDate(s.createdAt);
+            const updatedAt = formatDate(s.updatedAt);
+            const expandCell = `<td class="col-expand">${s.hasChildren ? `<button type="button" class="expand-btn" data-skill-path="${escapeAttr(s.path)}" title="展开子项">▶</button>` : ''}</td>`;
+            const nameCell = `<td class="col-name">${escapeHtml(s.name || s.dirName)}</td>`;
+            let firstDataCell = '';
+            if (hasAppName && s.appName) {
+              firstDataCell = `<td class="col-project">${escapeHtml(s.appName)}</td>`;
+            } else if (hasAppName) {
+              firstDataCell = '<td class="col-project">—</td>';
+            }
+            return `<tr class="skill-row ${s.skillMd === currentPath ? 'selected' : ''}" data-skill-md="${escapeAttr(s.skillMd)}" data-skill-name="${escapeAttr(s.name || s.dirName)}" data-skill-path="${escapeAttr(s.path)}">
+              ${expandCell}
+              ${firstDataCell}
+              ${nameCell}
+              <td class="col-desc"><span>${escapeHtml(s.description || '—')}</span></td>
+              <td class="col-time">${escapeHtml(createdAt)}</td>
+              <td class="col-time">${escapeHtml(updatedAt)}</td>
+              <td class="col-path">${escapeHtml(s.path)}</td>
+              <td class="col-actions">
+                <button type="button" class="btn copy-path" data-path="${escapeAttr(s.path)}">复制路径</button>
+              </td>
+            </tr>`;
+          }).join('');
+        }
+      }
+
+      tableBody.querySelectorAll('.skill-row').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('.copy-path') || e.target.closest('.expand-btn')) return;
+          const skillMd = tr.dataset.skillMd;
+          const skillName = tr.dataset.skillName;
+          const skillPath = tr.dataset.skillPath;
+          if (skillMd && skillMd.toLowerCase().endsWith('.md')) {
+            selectSkill({ skillMd, skillName, path: skillPath });
+            loadSkillContent(skillMd, skillName);
+          } else {
+            fetch('/api/skill/children?path=' + encodeURIComponent(skillPath))
+              .then(r => r.json())
+              .then(data => {
+                const children = data.children || [];
+                const skillMdFile = children.find(c => c.type === 'file' && c.name.toLowerCase() === 'skill.md');
+                const firstMd = children.find(c => c.type === 'file' && c.name.toLowerCase().endsWith('.md'));
+                const target = skillMdFile || firstMd;
+                if (target) {
+                  selectSkill({ skillMd: target.path, skillName: target.name, path: skillPath });
+                  loadSkillContent(target.path, target.name);
+                }
+              });
+          }
+        });
+      });
+      tableBody.querySelectorAll('.expand-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const tr = btn.closest('tr');
+          const skillPath = btn.dataset.skillPath;
+          if (btn.classList.contains('expanded')) {
+            let next = tr.nextElementSibling;
+            while (next && next.classList.contains('child-row')) {
+              const n = next.nextElementSibling;
+              next.remove();
+              next = n;
+            }
+            btn.classList.remove('expanded');
+            btn.textContent = '▶';
+            return;
+          }
+          btn.textContent = '…';
+          fetch('/api/skill/children?path=' + encodeURIComponent(skillPath))
+            .then(r => r.json())
+            .then(data => {
+              const children = data.children || [];
+              const cat = categories.find(c => c.id === activeCategoryId) || {};
+              const isProjects = cat.id === 'projects';
+              const hasAppNameCol = cat.skills && cat.skills.some(s => s.appName);
+              const extraColEmpty = (isProjects || hasAppNameCol) ? '<td class="col-project">—</td>' : '';
+              const frag = document.createDocumentFragment();
+              children.forEach(ch => {
+                const row = document.createElement('tr');
+                const isMd = ch.type === 'file' && ch.name.toLowerCase().endsWith('.md');
+                row.className = 'child-row' + (isMd ? ' clickable-md' : '');
+                if (isMd) {
+                  row.dataset.mdPath = ch.path;
+                  row.dataset.mdName = ch.name;
+                }
+                row.innerHTML = '<td class="col-expand"></td>' + extraColEmpty +
+                  '<td class="col-name"><span class="child-name">' + escapeHtml(ch.name) + '</span> <span class="child-type">(' + (ch.type === 'dir' ? '目录' : '文件') + (ch.isSkill ? ' · 子 Skill' : '') + ')</span></td>' +
+                  '<td class="col-desc">—</td><td class="col-time">—</td><td class="col-time">—</td>' +
+                  '<td class="col-path">' + escapeHtml(ch.path) + '</td>' +
+                  '<td class="col-actions"><button type="button" class="btn copy-path" data-path="' + escapeAttr(ch.path) + '">复制路径</button></td>';
+                frag.appendChild(row);
+              });
+              tr.parentNode.insertBefore(frag, tr.nextElementSibling);
+              btn.classList.add('expanded');
+              btn.textContent = '▼';
+              tableBody.querySelectorAll('.child-row.clickable-md').forEach(row => {
+                row.addEventListener('click', (ev) => {
+                  if (ev.target.closest('button')) return;
+                  const mdPath = row.dataset.mdPath;
+                  const mdName = row.dataset.mdName;
+                  selectSkill({ skillMd: mdPath, skillName: mdName });
+                  loadSkillContent(mdPath, mdName);
+                });
+              });
+              tableBody.querySelectorAll('.child-row .copy-path').forEach(b => {
+                b.addEventListener('click', (ev) => {
+                  ev.stopPropagation();
+                  navigator.clipboard.writeText(b.dataset.path).then(() => {
+                    const t = b.textContent;
+                    b.textContent = '已复制';
+                    setTimeout(() => { b.textContent = t; }, 1200);
+                  });
+                });
+              });
+            })
+            .catch(() => { btn.textContent = '▶'; });
+        });
+      });
+      tableBody.querySelectorAll('.copy-path').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(btn.dataset.path).then(() => {
+            const t = btn.textContent;
+            btn.textContent = '已复制';
+            setTimeout(() => { btn.textContent = t; }, 1200);
+          });
+        });
+      });
+    }
+
+    function selectSkill(skill) {
+      currentSkill = skill;
+      editorTitle.textContent = skill.skillName || 'SKILL.md';
+      editorPlaceholder.style.display = 'none';
+      editor.style.display = 'block';
+      editorActions.style.display = 'block';
+      renderTable();
+    }
+
+    function showEditorPlaceholder() {
+      currentSkill = null;
+      editorTitle.textContent = '—';
+      editor.value = '';
+      editor.style.display = 'none';
+      editorActions.style.display = 'none';
+      editorPlaceholder.style.display = 'block';
+      saveStatus.textContent = '';
+      renderTable();
+    }
+
+    function loadSkillContent(skillMd, skillName) {
+      editor.value = '';
+      editor.disabled = true;
+      saveStatus.textContent = '加载中…';
+      saveStatus.className = 'save-status';
+      fetch('/api/skill?path=' + encodeURIComponent(skillMd))
+        .then(r => {
+          if (!r.ok) throw new Error('not found');
+          return r.text();
+        })
+        .then(content => {
+          editor.disabled = false;
+          editor.value = content;
+          saveStatus.textContent = '';
+        })
+        .catch(() => {
+          editor.disabled = false;
+          saveStatus.textContent = '请求失败';
+          saveStatus.className = 'save-status err';
+        });
+    }
+
+    function doSave() {
+      if (!currentSkill || !currentSkill.skillMd) return;
+      const content = editor.value;
+      saveBtn.disabled = true;
+      saveStatus.textContent = '保存中…';
+      saveStatus.className = 'save-status';
+      fetch('/api/skill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: currentSkill.skillMd, content })
+      })
+        .then(r => r.json())
+        .then(data => {
+          saveBtn.disabled = false;
+          if (data.ok) {
+            saveStatus.textContent = '已保存';
+            saveStatus.className = 'save-status ok';
+            setTimeout(() => { saveStatus.textContent = ''; }, 2000);
+          } else {
+            saveStatus.textContent = data.error || '保存失败';
+            saveStatus.className = 'save-status err';
+          }
+        })
+        .catch(() => {
+          saveBtn.disabled = false;
+          saveStatus.textContent = '保存失败';
+          saveStatus.className = 'save-status err';
+        });
+    }
+
+    saveBtn.addEventListener('click', doSave);
+
+    addPathBtn.addEventListener('click', () => addProjectPath(projectPathInput.value));
+    projectPathInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addProjectPath(projectPathInput.value); });
+
+    document.getElementById('addPatternBtn').addEventListener('click', addProjectNamePattern);
+    document.getElementById('patternInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') addProjectNamePattern(); });
+    let patternsPanelCollapsed = false;
+    document.getElementById('projectNamePatternsHeader').addEventListener('click', () => {
+      patternsPanelCollapsed = !patternsPanelCollapsed;
+      document.getElementById('projectNamePatternsBody').classList.toggle('collapsed', patternsPanelCollapsed);
+      document.getElementById('projectNamePatternsToggle').textContent = patternsPanelCollapsed ? '▶' : '▼';
+    });
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderTable();
+    });
+
+    function render() {
+      if (!categories.length) {
+        mainEl.style.display = 'flex';
+        loadingEl.style.display = 'none';
+        tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem;">未找到任何分类或 Skill。</td></tr>';
+        return;
+      }
+      activeCategoryId = activeCategoryId || categories[0].id;
+      renderTabs();
+      renderTable();
+      renderProjectPathsPanel();
+      renderProjectNamePatternsPanel();
+      showEditorPlaceholder();
+      mainEl.style.display = 'flex';
+      loadingEl.style.display = 'none';
+    }
+
+    fetch('/api/skills')
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { showError(data.error); return; }
+        if (data.categories) categories = data.categories;
+        else if (Array.isArray(data)) categories = data;
+        else categories = data.allRoots || [];
+        if (data.projectScanPaths != null) projectScanPaths = data.projectScanPaths;
+        if (data.projectPathsDetail) {
+          projectPathsDetail = data.projectPathsDetail;
+          expandedPaths = new Set(projectPathsDetail.map(d => d.path));
+        }
+        if (data.projectNamePatterns) projectNamePatterns = data.projectNamePatterns;
+        if (!categories.some(c => c.id === 'projects')) {
+          categories.push({ id: 'projects', label: '项目skill', path: '', skills: [] });
+        }
+        render();
+      })
+      .catch(err => showError('加载失败: ' + err.message));
+  </script>
+</body>
+</html>

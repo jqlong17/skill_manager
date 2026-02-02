@@ -1,0 +1,46 @@
+{
+  "projectNamePatterns": [
+    { "id": "cursor", "pattern": "/([^/]+)/\\.cursor/skills", "description": ".cursor 前的目录（如 moi）" },
+    { "id": "skills", "pattern": "/([^/]+)/skills/", "description": "skills 前的目录（如 clawdbot-main）" },
+    { "id": "extensions", "pattern": "/([^/]+)/extensions/", "description": "extensions 前的目录（如 clawdbot-main）" }
+  ],
+  "skillRoots": [
+    {
+      "id": "global",
+      "label": "全局skill",
+      "path": "~/.cursor/skills"
+    },
+    {
+      "id": "cursor",
+      "label": "应用内置skill",
+      "path": "~/.cursor/skills-cursor"
+    },
+    {
+      "id": "clawdbot",
+      "label": "应用内置skill",
+      "path": "~/.clawdbot"
+    },
+    {
+      "id": "antigravity",
+      "label": "应用内置skill",
+      "path": "~/.antigravity"
+    },
+    {
+      "id": "claude",
+      "label": "应用内置skill",
+      "path": "~/.claude"
+    },
+    {
+      "id": "openclaw",
+      "label": "应用内置skill",
+      "path": "~/.openclaw/workspace/skills"
+    }
+  ],
+  "customRoots": [],
+  "projectScanPaths": [
+    "/Users/ruska/project/demo/moi",
+    "/Users/ruska/clawd",
+    "/Users/ruska/project",
+    "/Users/ruska/开源项目"
+  ]
+}
